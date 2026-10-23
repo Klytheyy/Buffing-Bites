@@ -1,10 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
-
-package com.mycompany.buffingbites;
-
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
