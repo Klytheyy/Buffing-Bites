@@ -1,9 +1,3 @@
-/*
- * BuffingBites main menu.
- * Keeps the existing palette and connects the buttons to the game and score file.
- */
-package com.mycompany.buffingbites;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
