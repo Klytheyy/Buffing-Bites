@@ -13,16 +13,9 @@ import java.util.Random;
  * PURPOSE:
  * Manage special fruits and their temporary effects.
  *
- * RESPONSIBILITIES:
- * 1. Decide when special fruits appear.
- * 2. Choose a special-fruit type.
- * 3. Track the 10-second expiration time.
- * 4. Apply a buff when the snake eats the fruit.
- * 5. Apply a debuff when the fruit rots.
- *
- * COORDINATION:
- * Yee owns snake movement and the regular food system.
- * Do not create another game loop in this class.
+ * NOTE:
+ * This version fixes the compilation errors. The actual effects still need
+ * to be connected to GamePanel and ScoreManager.
  */
 public class BuffManager {
 
@@ -31,16 +24,12 @@ public class BuffManager {
 
     private final Random random = new Random();
 
-    // TODO: Store the current special fruit, if one exists.
+    // Current special fruit, if one exists.
     private SpecialFruit activeFruit;
 
-    // TODO: Add the next spawn time if using scheduled spawning.
-    private long nextSpawnTime;
+    // Time when another special fruit is allowed to spawn.
+    private long nextSpawnTime = 0;
 
-    /*
-     * Keep the list of effect types in one place.
-     * Discuss the final effects with the group before implementing them.
-     */
     public enum EffectType {
         SPEED_BUFF,
         SLOW_DEBUFF,
@@ -48,16 +37,13 @@ public class BuffManager {
         REVERSE_CONTROLS
     }
 
-    /*
-     * Represents one special fruit on the board.
-     * You may expand this class if the design needs more information.
-     */
+    // Represents one special fruit on the board.
     public static class SpecialFruit {
 
-        private int x;
-        private int y;
-        private EffectType effectType;
-        private long spawnTime;
+        private final int x;
+        private final int y;
+        private final EffectType effectType;
+        private final long spawnTime;
 
         public SpecialFruit(
                 int x,
@@ -88,115 +74,101 @@ public class BuffManager {
         }
     }
 
-    /*
-     * TODO: Decide whether a new special fruit should spawn.
-     * The calling game screen can check this during its update cycle.
-     */
+    // Returns true when a special fruit is allowed to spawn.
     public boolean shouldSpawn(long currentTime) {
         return activeFruit == null && currentTime >= nextSpawnTime;
     }
 
-    /*
-     * TODO: Spawn a special fruit at a valid board location.
-     * Avoid placing it on top of the snake or regular food.
-     *
-     * Coordinate the board-position checks with Yee.
-     */
-    public void spawnSpecialFruit(
-            int x,
-            int y,
-            long currentTime) {
+    // Creates a special fruit at the supplied grid position.
+    // GamePanel should make sure the position is not occupied.
+    public void spawnSpecialFruit(int x, int y, long currentTime) {
+        if (activeFruit != null || currentTime < nextSpawnTime) {
+            return;
+        }
+
         EffectType[] effects = EffectType.values();
         EffectType chosenEffect = effects[random.nextInt(effects.length)];
-        
+
         activeFruit = new SpecialFruit(x, y, chosenEffect, currentTime);
     }
 
-    /*
-     * TODO: Return the active fruit so GamePanel can draw it.
-     * Return null if no special fruit is active.
-     */
+    // Returns the active fruit, or null if there is none.
     public SpecialFruit getActiveFruit() {
         return activeFruit;
     }
 
-    /*
-     * TODO: Check whether the active fruit has expired.
-     * If ten seconds have passed:
-     * 1. Remove the fruit.
-     * 2. Apply its assigned rot penalty/debuff.
-     * 3. Notify the game screen if needed.
-     */
+    // Checks whether the active fruit has expired.
+    // Pass System.currentTimeMillis() as currentTime.
     public void update(long currentTime) {
-        if (activeFruit != null) {
-            if (currentTime - activeFruit.getSpawnTime() >= FRUIT_LIFETIME_MS) {
-                applyRotPenalty(activeFruit.getEffectType());
-                activeFruit = null;
-                nextSpawnTime = currentTime + 5000 + random.nextInt(10000);
-            }
-        }
-    }
+        if (activeFruit != null
+                && currentTime - activeFruit.getSpawnTime() >= FRUIT_LIFETIME_MS) {
 
-    /*
-     * TODO: Check whether the snake has eaten the special fruit.
-     * If eaten:
-     * 1. Apply the fruit's buff.
-     * 2. Remove the fruit.
-     * 3. Prevent its expiration penalty from also triggering.
-     */
-    public void collectSpecialFruit() {
-        if (activeFruit != null) {
-            applyBuff(activeFruit.getEffectType());
+            applyRotPenalty(activeFruit.getEffectType());
             activeFruit = null;
             nextSpawnTime = currentTime + 5000 + random.nextInt(10000);
         }
     }
 
-    /*
-     * TODO: Apply the selected effect to the game.
-     *
-     * Examples to discuss with the group:
-     * SPEED_BUFF: temporarily increase movement speed.
-     * SLOW_DEBUFF: temporarily reduce movement speed.
-     * BONUS_SCORE: award extra points.
-     * REVERSE_CONTROLS: temporarily reverse directions.
-     *
-     * Agree with Yee on how effects change movement speed or controls.
-     */
+    // Called when the snake collects the active special fruit.
+    public void collectSpecialFruit() {
+        if (activeFruit != null) {
+            applyBuff(activeFruit.getEffectType());
+            activeFruit = null;
+
+            long currentTime = System.currentTimeMillis();
+            nextSpawnTime = currentTime + 5000 + random.nextInt(10000);
+        }
+    }
+
+    // TODO: Connect these effects to GamePanel and ScoreManager.
     private void applyBuff(EffectType effectType) {
         switch (effectType) {
-            case SPEED_BUFF -> { /* Increase snake speed */ }
-            case BONUS_SCORE -> { /* Add extra points to score */ }
-            case SLOW_DEBUFF -> { /* Decrease snake speed */ }
-            case REVERSE_CONTROLS -> { /* Opposite controls */ }
+            case SPEED_BUFF:
+                // TODO: Temporarily increase the snake's movement speed.
+                break;
+
+            case BONUS_SCORE:
+                // TODO: Ask ScoreManager to award bonus points.
+                break;
+
+            case SLOW_DEBUFF:
+                // TODO: Temporarily decrease the snake's movement speed.
+                break;
+
+            case REVERSE_CONTROLS:
+                // TODO: Temporarily reverse the snake's controls.
+                break;
+
+            default:
+                break;
+        }
     }
 
-    /*
-     * TODO: Apply the penalty for allowing a special fruit to rot.
-     * Decide whether each fruit has its own penalty or uses one common
-     * debuff. Coordinate the rule with the whole team.
-     */
+    // Called when a special fruit remains uneaten for ten seconds.
     private void applyRotPenalty(EffectType effectType) {
         switch (effectType) {
-            case SLOW_DEBUFF -> { /* Decrease snake speed */ }
-            case REVERSE_CONTROLS -> { /* Opposite controls */ }
-            default -> { /* Default score penalty for missing regular buffs */ }
+            case SLOW_DEBUFF:
+                // TODO: Apply a temporary speed penalty.
+                break;
+
+            case REVERSE_CONTROLS:
+                // TODO: Apply a temporary reversed-controls penalty.
+                break;
+
+            default:
+                // TODO: Apply the agreed penalty for allowing a fruit to rot.
+                break;
+        }
     }
 
-    /*
-     * TODO: Return whether a special fruit is currently active.
-     */
     public boolean hasActiveFruit() {
         return activeFruit != null;
     }
 
-    /*
-     * TODO: Clear the active fruit and reset temporary effects
-     * when the game restarts.
-     */
+    // Clears the active fruit and schedules the next spawn after five seconds.
     public void reset() {
         activeFruit = null;
+        long currentTime = System.currentTimeMillis();
         nextSpawnTime = currentTime + 5000;
     }
 }
-
