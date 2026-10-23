@@ -12,26 +12,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 
-/*
- * TEAM MEMBER: Tantay
- *
- * PURPOSE:
- * Handle persistent game data.
- *
- * RESPONSIBILITIES:
- * 1. Save completed game scores.
- * 2. Load saved scores for the High Scores screen.
- * 3. Keep score data available after the game closes.
- * 4. Handle file/database errors safely.
- *
- * IMPORTANT:
- * Confirm the instructor's required storage technology first.
- * Possible options include CSV, TXT, or a database.
- * Do not choose one until the requirement is confirmed.
- */
-
-
-//Uses CSV files
 public class DataManager {
     // Set the location of the score file
     private static final Path SCORE_FILE = Paths.get("data", "scores.csv");
