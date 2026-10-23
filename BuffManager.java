@@ -1,15 +1,5 @@
 import java.util.Random;
 
-/*
- * TEAM MEMBER: Dacanay
- *
- * PURPOSE:
- * Manage special fruits and their temporary effects.
- *
- * NOTE:
- * This version fixes the compilation errors. The actual effects still need
- * to be connected to GamePanel and ScoreManager.
- */
 public class BuffManager {
 
     // A special fruit has ten seconds before it expires.
