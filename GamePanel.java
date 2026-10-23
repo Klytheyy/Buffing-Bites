@@ -1,9 +1,3 @@
-/*
- * BuffingBites basic Snake game screen.
- * This connects the current gameplay skeleton to ScoreManager and DataManager.
- */
-package com.mycompany.buffingbites;
-
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
