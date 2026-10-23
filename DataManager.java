@@ -17,18 +17,6 @@ public class DataManager {
     private static final Path SCORE_FILE = Paths.get("data", "scores.csv");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     
-    
-    /*
-     * TODO: Implement this method after the storage method is agreed upon.
-     *
-     * Parameters:
-     * playerName - the name associated with the score
-     * score      - the final score for the completed game
-     *
-     * Return:
-     * true if saving succeeds; false if it fails.
-     */
-    
     // Method for saving a player's score
     public boolean saveScore(String playerName, int score) {
         if (playerName == null || playerName.trim().isEmpty() || score < 0) {
