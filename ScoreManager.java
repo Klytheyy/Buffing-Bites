@@ -1,21 +1,3 @@
-package com.mycompany.buffingbites;
-
-/*
- * TEAM MEMBER: Estrada
- *
- * PURPOSE:
- * Manage the player's score and score-related game states.
- *
- * RESPONSIBILITIES:
- * 1. Track the current score.
- * 2. Award points for regular food and special effects.
- * 3. Track the best score during the current session.
- * 4. Coordinate game-over and restart behavior with Ken and Yee.
- *
- * IMPORTANT:
- * DataManager handles saving and loading scores.
- * This class handles the score during gameplay.
- */
 public class ScoreManager {
 
     // TODO: Agree on the points awarded for each action.
