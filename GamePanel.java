@@ -9,178 +9,226 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-/*
- * TEAM MEMBER: Yee
- *
- * PURPOSE:
- * This class contains the actual Snake gameplay screen.
- *
- * RESPONSIBILITIES:
- * 1. Draw the game board and snake.
- * 2. Handle snake movement.
- * 3. Read keyboard controls.
- * 4. Spawn regular food.
- * 5. Detect food, wall, and self-collisions.
- * 6. Increase the snake's length when it eats.
- *
- * IMPORTANT:
- * Keep the special-fruit effects in BuffManager.java.
- * Keep score calculations in ScoreManager.java.
- */
 public class GamePanel extends JPanel implements ActionListener {
-
-    // TODO: Coordinate with Ken on the final board dimensions.
+ 
     private final int TILE_SIZE = 20;
     private final int BOARD_COLUMNS = 30;
     private final int BOARD_ROWS = 20;
-
-    // TODO: Choose the final starting position and snake length.
+ 
+    // snake positions are in grid tiles, not pixels
     private int[] snakeX = new int[BOARD_COLUMNS * BOARD_ROWS];
     private int[] snakeY = new int[BOARD_COLUMNS * BOARD_ROWS];
     private int snakeLength = 3;
-
-    // TODO: Add variables for the regular food's grid position.
+ 
+    // regular food position (grid tiles)
     private int foodX;
     private int foodY;
-
-    // TODO: Track the snake's movement direction.
-    // Suggested values: "UP", "DOWN", "LEFT", "RIGHT".
+ 
+    // "UP", "DOWN", "LEFT", "RIGHT"
     private String direction = "RIGHT";
     private String nextDirection = "RIGHT";
-
-    // Swing Timer controls the game's repeating update.
+ 
     private Timer gameTimer;
-
-    // TODO: Track whether the game is running or over.
+ 
     private boolean gameRunning = false;
-
+    private boolean gameOver = false;
+ 
+    // temporary score for the HUD
+    // TODO: replace with ScoreManager once it's ready
+    private int score = 0;
+ 
     public GamePanel() {
         setPreferredSize(new Dimension(
             BOARD_COLUMNS * TILE_SIZE,
             BOARD_ROWS * TILE_SIZE
         ));
-
+ 
         setBackground(Color.decode("#1A0B2E"));
         setFocusable(true);
-
-        // TODO: Implement keyboard controls.
+ 
         setupKeyboardControls();
-
-        // TODO: Initialize the snake's starting position.
         initializeSnake();
-
-        // TODO: Place the first regular food item.
         spawnRegularFood();
-
-        // TODO: Choose a suitable update interval.
-        // Example: approximately 100 milliseconds per update.
+ 
+        // update every 100 milliseconds
         gameTimer = new Timer(100, this);
     }
-
-    /*
-     * TODO: Place the snake near the center of the board.
-     * Set each segment's coordinates.
-     * Make sure the initial snake fits inside the board.
-     */
+ 
+    // put the snake in the middle of the board, facing right
     private void initializeSnake() {
-        // YOUR CODE HERE
+        snakeLength = 3;
+        direction = "RIGHT";
+        nextDirection = "RIGHT";
+ 
+        for (int i = 0; i < snakeLength; i++) {
+            snakeX[i] = BOARD_COLUMNS / 2 - i;  // body goes to the left of the head
+            snakeY[i] = BOARD_ROWS / 2;
+        }
     }
-
-    /*
-     * TODO: Use Swing key bindings or a KeyListener to detect
-     * the arrow keys or WASD.
-     *
-     * IMPORTANT:
-     * Prevent the snake from reversing directly into itself.
-     * Example: if moving RIGHT, do not allow LEFT immediately.
-     */
+ 
+    // arrow keys + WASD, can't reverse directly
     private void setupKeyboardControls() {
-        // YOUR CODE HERE
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int key = e.getKeyCode();
+ 
+                if ((key == KeyEvent.VK_UP || key == KeyEvent.VK_W) && !direction.equals("DOWN")) {
+                    nextDirection = "UP";
+                } else if ((key == KeyEvent.VK_DOWN || key == KeyEvent.VK_S) && !direction.equals("UP")) {
+                    nextDirection = "DOWN";
+                } else if ((key == KeyEvent.VK_LEFT || key == KeyEvent.VK_A) && !direction.equals("RIGHT")) {
+                    nextDirection = "LEFT";
+                } else if ((key == KeyEvent.VK_RIGHT || key == KeyEvent.VK_D) && !direction.equals("LEFT")) {
+                    nextDirection = "RIGHT";
+                } else if (key == KeyEvent.VK_ENTER && gameOver) {
+                    startGame();  // press enter to restart
+                }
+            }
+        });
     }
-
-    /*
-     * TODO: Choose a random grid position for regular food.
-     * Do not place food on any segment of the snake.
-     */
+ 
+    // random spot that isn't on the snake
     private void spawnRegularFood() {
-        // YOUR CODE HERE
+        boolean onSnake = true;
+ 
+        while (onSnake) {
+            foodX = (int) (Math.random() * BOARD_COLUMNS);
+            foodY = (int) (Math.random() * BOARD_ROWS);
+ 
+            onSnake = false;
+            for (int i = 0; i < snakeLength; i++) {
+                if (snakeX[i] == foodX && snakeY[i] == foodY) {
+                    onSnake = true;
+                }
+            }
+        }
     }
-
-    /*
-     * TODO: Move the snake one tile in its current direction.
-     * Shift the body segments so they follow the head.
-     */
+ 
     private void moveSnake() {
-        // YOUR CODE HERE
+        direction = nextDirection;
+ 
+        // body follows the segment in front of it
+        for (int i = snakeLength - 1; i > 0; i--) {
+            snakeX[i] = snakeX[i - 1];
+            snakeY[i] = snakeY[i - 1];
+        }
+ 
+        // move the head
+        if (direction.equals("UP")) {
+            snakeY[0]--;
+        } else if (direction.equals("DOWN")) {
+            snakeY[0]++;
+        } else if (direction.equals("LEFT")) {
+            snakeX[0]--;
+        } else if (direction.equals("RIGHT")) {
+            snakeX[0]++;
+        }
     }
-
-    /*
-     * TODO: Check whether the snake's head touches regular food.
-     * If it does:
-     * 1. Increase snakeLength.
-     * 2. Ask ScoreManager to add the appropriate points.
-     * 3. Spawn another regular food item.
-     */
+ 
     private void checkRegularFoodCollision() {
-        // YOUR CODE HERE
+        if (snakeX[0] == foodX && snakeY[0] == foodY) {
+            snakeLength++;
+ 
+            // new tail segment copies the one before it so it doesn't sit at a random spot
+            snakeX[snakeLength - 1] = snakeX[snakeLength - 2];
+            snakeY[snakeLength - 1] = snakeY[snakeLength - 2];
+ 
+            score += 10;  // TODO: ask ScoreManager to add the points instead
+            spawnRegularFood();
+        }
     }
-
-    /*
-     * TODO: Check whether the snake hits a wall or its own body.
-     * If a collision occurs, stop the game and trigger game over.
-     * Coordinate the game-over behavior with Estrada and Ken.
-     */
+ 
     private void checkCollisions() {
-        // YOUR CODE HERE
+        // wall
+        if (snakeX[0] < 0 || snakeX[0] >= BOARD_COLUMNS
+                || snakeY[0] < 0 || snakeY[0] >= BOARD_ROWS) {
+            endGame();
+        }
+ 
+        // own body (start at 1 so the head doesn't hit itself)
+        for (int i = 1; i < snakeLength; i++) {
+            if (snakeX[0] == snakeX[i] && snakeY[0] == snakeY[i]) {
+                endGame();
+            }
+        }
     }
-
-    /*
-     * TODO: Update the game state on each timer tick.
-     * Suggested order:
-     * 1. Move the snake.
-     * 2. Check regular food.
-     * 3. Check collisions.
-     * 4. Repaint the screen.
-     */
+ 
+    // TODO: coordinate the real game-over behavior with Estrada and Ken
+    private void endGame() {
+        gameOver = true;
+        stopGame();
+    }
+ 
     @Override
     public void actionPerformed(ActionEvent e) {
-        // YOUR CODE HERE
+        if (gameRunning) {
+            moveSnake();
+            checkRegularFoodCollision();
+            checkCollisions();
+        }
         repaint();
     }
-
-    /*
-     * TODO: Draw the grid, snake, regular food, and any HUD elements.
-     * Use the agreed BuffingBites color palette.
-     */
+ 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
+ 
         Graphics2D g2 = (Graphics2D) g.create();
-
-        // TODO: Enable antialiasing if desired.
-        // TODO: Draw the board and its grid lines.
-        // TODO: Draw the snake's body and head.
-        // TODO: Draw regular food.
-        // TODO: Draw score or status information if appropriate.
-
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+ 
+        // grid lines
+        g2.setColor(new Color(255, 255, 255, 20));
+        for (int x = 0; x <= BOARD_COLUMNS; x++) {
+            g2.drawLine(x * TILE_SIZE, 0, x * TILE_SIZE, BOARD_ROWS * TILE_SIZE);
+        }
+        for (int y = 0; y <= BOARD_ROWS; y++) {
+            g2.drawLine(0, y * TILE_SIZE, BOARD_COLUMNS * TILE_SIZE, y * TILE_SIZE);
+        }
+ 
+        // food
+        g2.setColor(Color.RED);
+        g2.fillOval(foodX * TILE_SIZE, foodY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+ 
+        // snake (head is a different color)
+        for (int i = 0; i < snakeLength; i++) {
+            if (i == 0) {
+                g2.setColor(Color.YELLOW);
+            } else {
+                g2.setColor(Color.GREEN);
+            }
+            g2.fillRect(snakeX[i] * TILE_SIZE, snakeY[i] * TILE_SIZE, TILE_SIZE - 1, TILE_SIZE - 1);
+        }
+ 
+        // score
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        g2.drawString("Score: " + score, 10, 20);
+ 
+        // game over text
+        if (gameOver) {
+            g2.setFont(new Font("Arial", Font.BOLD, 36));
+            g2.drawString("GAME OVER", 190, 190);
+            g2.setFont(new Font("Arial", Font.PLAIN, 16));
+            g2.drawString("Press ENTER to play again", 205, 220);
+        }
+ 
         g2.dispose();
     }
-
-    /*
-     * TODO: Start a new game.
-     * Reset the snake, food, direction, and running state.
-     * Start the timer and request keyboard focus.
-     */
+ 
+    // reset everything and start
     public void startGame() {
-        // YOUR CODE HERE
+        initializeSnake();
+        spawnRegularFood();
+        score = 0;
+        gameOver = false;
+        gameRunning = true;
+        gameTimer.start();
+        requestFocusInWindow();
     }
-
-    /*
-     * TODO: Stop the timer when leaving the game or ending a round.
-     */
+ 
     public void stopGame() {
-        // YOUR CODE HERE
+        gameTimer.stop();
+        gameRunning = false;
     }
 }
-
