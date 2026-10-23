@@ -93,8 +93,7 @@ public class BuffManager {
      * The calling game screen can check this during its update cycle.
      */
     public boolean shouldSpawn(long currentTime) {
-        // YOUR CODE HERE
-        return false;
+        return activeFruit == null && currentTime >= nextSpawnTime;
     }
 
     /*
@@ -107,8 +106,10 @@ public class BuffManager {
             int x,
             int y,
             long currentTime) {
-
-        // YOUR CODE HERE
+        EffectType[] effects = EffectType.values();
+        EffectType chosenEffect = effects[random.nextInt(effects.length)];
+        
+        activeFruit = new SpecialFruit(x, y, chosenEffect, currentTime);
     }
 
     /*
@@ -127,7 +128,13 @@ public class BuffManager {
      * 3. Notify the game screen if needed.
      */
     public void update(long currentTime) {
-        // YOUR CODE HERE
+        if (activeFruit != null) {
+            if (currentTime - activeFruit.getSpawnTime() >= FRUIT_LIFETIME_MS) {
+                applyRotPenalty(activeFruit.getEffectType());
+                activeFruit = null;
+                nextSpawnTime = currentTime + 5000 + random.nextInt(10000);
+            }
+        }
     }
 
     /*
@@ -138,7 +145,11 @@ public class BuffManager {
      * 3. Prevent its expiration penalty from also triggering.
      */
     public void collectSpecialFruit() {
-        // YOUR CODE HERE
+        if (activeFruit != null) {
+            applyBuff(activeFruit.getEffectType());
+            activeFruit = null;
+            nextSpawnTime = currentTime + 5000 + random.nextInt(10000);
+        }
     }
 
     /*
@@ -153,7 +164,11 @@ public class BuffManager {
      * Agree with Yee on how effects change movement speed or controls.
      */
     private void applyBuff(EffectType effectType) {
-        // YOUR CODE HERE
+        switch (effectType) {
+            case SPEED_BUFF -> { /* Increase snake speed */ }
+            case BONUS_SCORE -> { /* Add extra points to score */ }
+            case SLOW_DEBUFF -> { /* Decrease snake speed */ }
+            case REVERSE_CONTROLS -> { /* Opposite controls */ }
     }
 
     /*
@@ -162,7 +177,10 @@ public class BuffManager {
      * debuff. Coordinate the rule with the whole team.
      */
     private void applyRotPenalty(EffectType effectType) {
-        // YOUR CODE HERE
+        switch (effectType) {
+            case SLOW_DEBUFF -> { /* Decrease snake speed */ }
+            case REVERSE_CONTROLS -> { /* Opposite controls */ }
+            default -> { /* Default score penalty for missing regular buffs */ }
     }
 
     /*
@@ -177,7 +195,8 @@ public class BuffManager {
      * when the game restarts.
      */
     public void reset() {
-        // YOUR CODE HERE
+        activeFruit = null;
+        nextSpawnTime = currentTime + 5000;
     }
 }
 
