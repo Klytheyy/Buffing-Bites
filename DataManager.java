@@ -1,4 +1,3 @@
-import java.util.List;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -11,186 +10,178 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 public class DataManager {
-    // Set the location of the score file
+
+    // SINGLETON PATTERN: only one DataManager object is shared by the game.
+    // This keeps score-file access centralized instead of creating separate managers.
+    private static final DataManager INSTANCE = new DataManager();
+
+    // The private constructor prevents other classes from using "new DataManager()".
+    DataManager() { }
+
+    // Other classes call this method to get the one shared DataManager object.
+    public static DataManager getInstance() {
+        return INSTANCE;
+    }
+
     private static final Path SCORE_FILE = Paths.get("data", "scores.csv");
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    
-    // Method for saving a player's score
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     public boolean saveScore(String playerName, int score) {
         if (playerName == null || playerName.trim().isEmpty() || score < 0) {
             return false;
         }
-
         try {
-            // Get the folder containing the score file
-            Path parent = SCORE_FILE.getParent();
-
-            // Create the data folder if it does not exist
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-            
-            // Check whether the file is missing or empty
-            // A header is needed only when creating a new CSV file
+            Files.createDirectories(SCORE_FILE.getParent());
             boolean writeHeader = !Files.exists(SCORE_FILE) || Files.size(SCORE_FILE) == 0;
-
-            // Open the file for writing without deleting old scores
-            // CREATE creates the file if it does not exist
-            // APPEND adds new scores to the end of the file
-            try (BufferedWriter writer = Files.newBufferedWriter(SCORE_FILE, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
-
+            try (BufferedWriter writer = Files.newBufferedWriter(
+                    SCORE_FILE, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
                 if (writeHeader) {
                     writer.write("Player,Score,Date");
                     writer.newLine();
                 }
-
-                String name = playerName.trim();
                 String date = LocalDateTime.now().format(DATE_FORMAT);
-                writer.write(name + "," + score + "," + date);
+                writer.write(csv(playerName.trim()) + "," + score + "," + csv(date));
                 writer.newLine();
             }
             return true;
-
         } catch (IOException e) {
-            // Display an error if the file cannot be written
             System.out.println("Error saving score: " + e.getMessage());
             return false;
         }
     }
 
-    /*
-     * TODO: Load saved scores from the agreed storage system.
-     *
-     * Coordinate the return format with Ken before implementing
-     * the High Scores screen.
-     */
-    
-    // Load saved scores and return the top 10 as formatted text
+    // Returns the ten highest scores for screens that only need a leaderboard preview.
     public List<String> loadHighScores() {
-        // Temporarily store the score records before sorting
-        List<ScoreRecord> records = new ArrayList<>();
+        List<String> allScores = loadAllHighScores();
+        return new ArrayList<>(allScores.subList(0, Math.min(10, allScores.size())));
+    }
 
-        if (!Files.exists(SCORE_FILE)) {
-            return new ArrayList<>();
+    // Returns every saved score, sorted from highest to lowest.
+    public List<String> loadAllHighScores() {
+        List<ScoreRecord> records = readRecords();
+        List<String> result = new ArrayList<>();
+        for (int i = 0; i < records.size(); i++) {
+            ScoreRecord record = records.get(i);
+            result.add((i + 1) + ". " + record.playerName + " - "
+                    + record.score + " points - " + record.date);
         }
+        return result;
+    }
 
-        try (BufferedReader reader = Files.newBufferedReader(
-                SCORE_FILE, StandardCharsets.UTF_8)) {
+    // Deletes the selected row using its position in the complete sorted score list.
+    public boolean deleteHighScoreAt(int sortedIndex) {
+        List<ScoreRecord> records = readRecords();
+        if (sortedIndex < 0 || sortedIndex >= records.size()) {
+            return false;
+        }
+        records.remove(sortedIndex);
+        return writeRecords(records);
+    }
 
-            reader.readLine();
-            
-            String line;
-            
-             // Read the file one line at a time until there are no more lines
+    private List<ScoreRecord> readRecords() {
+        List<ScoreRecord> records = new ArrayList<>();
+        if (!Files.exists(SCORE_FILE)) return records;
+
+        try (BufferedReader reader = Files.newBufferedReader(SCORE_FILE, StandardCharsets.UTF_8)) {
+            String line = reader.readLine(); // CSV header
             while ((line = reader.readLine()) != null) {
                 try {
                     List<String> fields = parseCsvLine(line);
-                    if (fields.size() != 3) {
-                        continue;
+                    if (fields.size() != 3) continue;
+                    String name = fields.get(0).trim();
+                    int score = Integer.parseInt(fields.get(1).trim());
+                    String date = fields.get(2).trim();
+                    if (!name.isEmpty() && score >= 0) {
+                        records.add(new ScoreRecord(name, score, date));
                     }
-                    String name = fields.get(0);
-                    int score = Integer.parseInt(fields.get(1));
-                    String date = fields.get(2);
-                    if (name.trim().isEmpty() || score < 0) {
-                        continue;
-                    }
-                    // Create a score record and add it to the list
-                    records.add(new ScoreRecord(name, score, date));
-                    
-                } catch (IllegalArgumentException e) {
-                    // Skip invalid score records.
+                } catch (IllegalArgumentException ignored) {
+                    // Skip malformed rows but keep valid saved scores.
                 }
             }
         } catch (IOException e) {
-            // Display an error if the file cannot be read
             System.out.println("Error loading scores: " + e.getMessage());
         }
-        
-        // Sort scores from highest to lowest
-        // If scores are tied, sort by date in ascending order
-        records.sort(Comparator.comparingInt(ScoreRecord::getScore).reversed().thenComparing(ScoreRecord::getDate));
-        
-        List<String> highScores = new ArrayList<>();
-        
-        // Display no more than 10 scores
-        int limit = Math.min(10, records.size());
-        
-        for (int i = 0; i < limit; i++) {
-            ScoreRecord record = records.get(i);
-            highScores.add((i + 1) + ". " + record.getPlayerName() + " - " + record.getScore() + " points - " + record.getDate()
-            );
-        }
-        return highScores;
+        records.sort(Comparator.comparingInt((ScoreRecord r) -> r.score)
+                .reversed().thenComparing(r -> r.date));
+        return records;
     }
-    /*
-     * TODO: Decide how the application should handle missing,
-     * empty, or unreadable score data.
-     */
 
-    // Check whether the program can access the score storage location
-    public boolean isStorageAvailable() {
+    private boolean writeRecords(List<ScoreRecord> records) {
         try {
-            // Get the folder containing the score file
-            Path parent = SCORE_FILE.getParent();
-            
-            // If there is no parent folder, check the file directly
-            if (parent == null) {
-                return Files.exists(SCORE_FILE)
-                        && Files.isReadable(SCORE_FILE)
-                        && Files.isWritable(SCORE_FILE);
+            Files.createDirectories(SCORE_FILE.getParent());
+            try (BufferedWriter writer = Files.newBufferedWriter(
+                    SCORE_FILE, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                writer.write("Player,Score,Date");
+                writer.newLine();
+                for (ScoreRecord record : records) {
+                    writer.write(csv(record.playerName) + "," + record.score + "," + csv(record.date));
+                    writer.newLine();
+                }
             }
-
-            // Create the data folder if it does not exist
-            Files.createDirectories(parent);    
-            
-            // Confirm that the folder exists and can be written to
-            return Files.isDirectory(parent)
-                    && Files.isWritable(parent)
-                    && (!Files.exists(SCORE_FILE)
-                    || (Files.isRegularFile(SCORE_FILE)
-                    && Files.isReadable(SCORE_FILE)
-                    && Files.isWritable(SCORE_FILE)));
-
+            return true;
         } catch (IOException e) {
-            // Return false if checking or creating storage fails
+            System.out.println("Error updating scores: " + e.getMessage());
             return false;
         }
     }
-    
-    // Reads saved scores from the CSV file
-    private List<String> parseCsvLine(String line) {
 
-        // Split the line wherever a comma appears
-        String[] fields = line.split(",", -1);
-
-        // Convert the array into a list and return it
-        return new ArrayList<>(java.util.Arrays.asList(fields));
+    private String csv(String value) {
+        return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 
-    // Starts the score record with its three values
+    // Handles quoted CSV values, including player names containing commas.
+    private List<String> parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder value = new StringBuilder();
+        boolean quoted = false;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch == '"') {
+                if (quoted && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    value.append('"');
+                    i++;
+                } else {
+                    quoted = !quoted;
+                }
+            } else if (ch == ',' && !quoted) {
+                fields.add(value.toString());
+                value.setLength(0);
+            } else {
+                value.append(ch);
+            }
+        }
+        fields.add(value.toString());
+        return fields;
+    }
+
+    public boolean isStorageAvailable() {
+        try {
+            Files.createDirectories(SCORE_FILE.getParent());
+            return Files.isDirectory(SCORE_FILE.getParent())
+                    && Files.isWritable(SCORE_FILE.getParent())
+                    && (!Files.exists(SCORE_FILE)
+                    || (Files.isRegularFile(SCORE_FILE)
+                    && Files.isReadable(SCORE_FILE) && Files.isWritable(SCORE_FILE)));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     private static class ScoreRecord {
         private final String playerName;
         private final int score;
         private final String date;
 
-        public ScoreRecord(String playerName, int score, String date) {
+        private ScoreRecord(String playerName, int score, String date) {
             this.playerName = playerName;
             this.score = score;
             this.date = date;
-        }
-
-        public String getPlayerName() {
-            return playerName;
-        }
-
-        public int getScore() {
-            return score;
-        }
-
-        public String getDate() {
-            return date;
         }
     }
 }
