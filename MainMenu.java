@@ -122,16 +122,15 @@ private void showHowToPlay() {
 
         "Collect regular food to grow your snake.\n\n"
         + "Each regular food gives 10 points.\n"
-        + "Leave an apple too long and it rots: eating it costs 5 points and the snake does not grow.\n"
         + "Your running score is displayed above the game board.\n"
         + "Avoid the walls and your own body.",
 
         "SPECIAL FRUITS AND EFFECTS\n\n"
         + "GRAPE: Fresh = +15% speed for 7 seconds. Rotten = -15% speed for 7 seconds.\n\n"
-        + "BANANA: Fresh = 2x points for the next 5 regular foods. Rotten = 0.5x points for the next 5 regular foods.\n\n"
-        + "ORANGE: Fresh = protects against one collision for 10 seconds. Rotten = removes active protection.\n\n"
+        + "GREEN APPLE: Fresh = 2x points for the next 5 regular foods. Rotten = 0.5x points for the next 5 regular foods.\n\n"
+        + "BLUEBERRY: Fresh = protects against one collision for 10 seconds. Rotten = removes active protection.\n\n"
         + "GOLDEN PEAR: Fresh = +30 points. Rotten = -15 points.\n\n"
-        + "FRUIT ROTTING TIMER (apples too): Easy 20 seconds, Medium 15 seconds, Hard 10 seconds. Rotten food remains until collected.",
+        + "FRUIT ROTTING TIMER: Easy 20 seconds, Medium 15 seconds, Hard 10 seconds. Rotten fruits remain until collected.",
 
         "PAUSE AND SURVIVE\n\n"
         + "Press ESC to pause the game. Press ESC again to resume.\n"
@@ -466,8 +465,42 @@ private void showHighScores() {
     dialog.setVisible(true);
 }
 
+private JPanel createInfoCard(
+        String heading, String title, String description) {
+
+    JPanel card = new JPanel();
+    card.setBackground(DEEP_VIOLET);
+    card.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(ELECTRIC, 1),
+        BorderFactory.createEmptyBorder(12, 14, 12, 14)
+    ));
+    card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+    card.setAlignmentX(Component.LEFT_ALIGNMENT);
+    card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
+    JLabel headingLabel = new JLabel(heading);
+    headingLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+    headingLabel.setForeground(TEAL);
+
+    JLabel titleLabel = new JLabel(title);
+    titleLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+    titleLabel.setForeground(MINT);
+
+    JLabel descriptionLabel = new JLabel(description);
+    descriptionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+    descriptionLabel.setForeground(TEXT);
+
+    card.add(headingLabel);
+    card.add(Box.createVerticalStrut(4));
+    card.add(titleLabel);
+    card.add(Box.createVerticalStrut(3));
+    card.add(descriptionLabel);
+
+    return card;
+}
+
 private JDialog createStyledDialog(String title, int width, int height) {
-    JDialog dialog = new JDialog(this, true);
+    JDialog dialog = new JDialog(this, false);
     dialog.setTitle(title);
     dialog.setSize(width, height);
     dialog.setResizable(false);
