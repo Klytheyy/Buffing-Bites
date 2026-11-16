@@ -57,6 +57,8 @@ public class GamePanel extends JPanel implements ActionListener {
 
     // Remembers where the tail was before moving, so the shield can undo a move.
     private int prevTailX, prevTailY;
+    private int previousSnakeLength;
+    private boolean waitingForSafeTurn;
 
     private final ScoreManager scoreManager = new ScoreManager();
     // SINGLETON: use the one shared DataManager instead of "new DataManager()".
@@ -317,13 +319,26 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private void moveSnake() {
+        // After the Orange shield blocks a collision, wait for the player
+        // to choose a safe turn instead of moving straight into the same body part.
+        if (waitingForSafeTurn) {
+            if (inputQueue.isEmpty()) {
+                stationary = true;
+                syncPreviousPositions();
+                return;
+            }
+            waitingForSafeTurn = false;
+        }
+
         if (!inputQueue.isEmpty()) {
             direction = inputQueue.pollFirst();
         }
 
         stationary = false;
 
-        // Where every segment was before this step (used for smooth drawing).
+        // Save the complete previous snake state. The Orange shield uses this
+        // snapshot to restore the exact safe position after a collision.
+        previousSnakeLength = snakeLength;
         System.arraycopy(snakeX, 0, prevSegX, 0, snakeLength);
         System.arraycopy(snakeY, 0, prevSegY, 0, snakeLength);
 
@@ -498,7 +513,11 @@ public class GamePanel extends JPanel implements ActionListener {
             undoMove();
             if (shieldActive) {
                 shieldActive = false;
-                statusLabel.setText("Shield used! Turn now!");
+                waitingForSafeTurn = true;
+                inputQueue.clear();
+                accumulatorNs = 0;
+                moveProgress = 1.0;
+                statusLabel.setText("Orange shield used! Choose a new direction to continue.");
             } else {
                 endGame();
             }
@@ -506,12 +525,11 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private void undoMove() {
-        for (int i = 0; i < snakeLength - 1; i++) {
-            snakeX[i] = snakeX[i + 1];
-            snakeY[i] = snakeY[i + 1];
-        }
-        snakeX[snakeLength - 1] = prevTailX;
-        snakeY[snakeLength - 1] = prevTailY;
+        // Restore every segment to the exact position before the failed move.
+        // This also avoids corrupting the body if its length changed this tick.
+        snakeLength = previousSnakeLength;
+        System.arraycopy(prevSegX, 0, snakeX, 0, snakeLength);
+        System.arraycopy(prevSegY, 0, snakeY, 0, snakeLength);
         syncPreviousPositions();
     }
 
@@ -579,9 +597,11 @@ public class GamePanel extends JPanel implements ActionListener {
     private void step() {
         updateFood(System.currentTimeMillis());
         moveSnake();
-        checkRegularFood();
+        // Check collision before collecting food so a failed move cannot
+        // award points or grow the snake before it is rolled back.
         checkCollisions();
         if (gameOver) return;
+        checkRegularFood();
 
         long now = System.currentTimeMillis();
         spawnFruitIfNeeded(now);
@@ -1397,6 +1417,8 @@ public class GamePanel extends JPanel implements ActionListener {
         multiplierFoodsLeft = 0;
         pointMultiplier = 1.0;
         shieldActive = false;
+        waitingForSafeTurn = false;
+        previousSnakeLength = snakeLength;
         scoreSaved = false;
         scoreManager.resetScore();
         shownScore = 0;
