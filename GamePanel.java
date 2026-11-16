@@ -8,8 +8,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
@@ -116,13 +114,11 @@ public class GamePanel extends JPanel implements ActionListener {
     private int highScoreOnFile = 0;
 
     // Game over screen
-    private static final Pattern SCORE_LINE = Pattern.compile("^(\\d+)\\. (.*) - (\\d+) points - (.*)$");
     private String lastPlayerName = "Player";
     private JPanel gameOverCard;
-    private JLabel goScoreLabel, goBadgeLabel, goRankLabel, goStatusLabel;
+    private JLabel goScoreLabel, goBadgeLabel, goStatusLabel;
     private JTextField nameField;
-    private UiButton saveButton;
-    private LeaderboardPanel leaderboard;
+    private GameUi saveButton;
 
     private final JPanel boardPanel = new JPanel(new GridBagLayout()) {
         @Override
@@ -864,7 +860,6 @@ public class GamePanel extends JPanel implements ActionListener {
         JLabel finalLabel = uiLabel("FINAL SCORE", 11, LILAC, Font.BOLD);
         goScoreLabel = uiLabel("0", 42, TEAL, Font.BOLD);
         goBadgeLabel = uiLabel(" ", 12, GOLD, Font.BOLD);
-        goRankLabel = uiLabel(" ", 12, TEXT, Font.PLAIN);
         JLabel nameTitle = uiLabel("YOUR NAME", 11, LILAC, Font.BOLD);
 
         nameField = new JTextField(lastPlayerName);
@@ -900,16 +895,16 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         });
 
-        saveButton = new UiButton("SAVE SCORE", TEAL, true);
+        saveButton = new GameUi("SAVE SCORE", TEAL, true);
         saveButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         fixSize(saveButton, 250, 34);
         saveButton.addActionListener(e -> saveScore());
 
         goStatusLabel = uiLabel(" ", 12, TEXT, Font.PLAIN);
 
-        UiButton againButton = new UiButton("PLAY AGAIN", MINT, true);
+        GameUi againButton = new GameUi("PLAY AGAIN", MINT, true);
         againButton.addActionListener(e -> startGame());
-        UiButton menuButton = new UiButton("MENU", LILAC, false);
+        GameUi menuButton = new GameUi("MENU", LILAC, false);
         menuButton.addActionListener(e -> closeGameWindow());
         JPanel buttons = new JPanel(new GridLayout(1, 2, 8, 0));
         buttons.setOpaque(false);
@@ -923,7 +918,6 @@ public class GamePanel extends JPanel implements ActionListener {
         left.add(finalLabel);
         left.add(goScoreLabel);
         left.add(goBadgeLabel);
-        left.add(goRankLabel);
         left.add(Box.createVerticalStrut(10));
         left.add(nameTitle);
         left.add(Box.createVerticalStrut(4));
@@ -935,11 +929,8 @@ public class GamePanel extends JPanel implements ActionListener {
         left.add(Box.createVerticalGlue());
         left.add(buttons);
 
-        // Right column: top scores
-        leaderboard = new LeaderboardPanel();
-
-        gameOverCard.add(left, BorderLayout.WEST);
-        gameOverCard.add(leaderboard, BorderLayout.CENTER);
+        // The leaderboard was removed, so the game-over screen uses one centered panel.
+        gameOverCard.add(left, BorderLayout.CENTER);
     }
 
     // Fills the card with this run's result and the current top scores.
@@ -950,15 +941,6 @@ public class GamePanel extends JPanel implements ActionListener {
         goScoreLabel.setText(String.valueOf(finalScore));
         goBadgeLabel.setText(newHigh ? "NEW HIGH SCORE!" : " ");
 
-        ArrayList<LeaderboardPanel.Row> rows = loadLeaderboardRows();
-        int rank = 1;
-        for (LeaderboardPanel.Row row : rows) {
-            if (row.score >= finalScore) rank++;
-        }
-        goRankLabel.setText(rows.isEmpty()
-                ? "You would be the first on the board!"
-                : "Your score would place #" + rank);
-
         boolean canSave = dataManager.isStorageAvailable();
         nameField.setText(lastPlayerName);
         nameField.setEnabled(canSave);
@@ -968,7 +950,6 @@ public class GamePanel extends JPanel implements ActionListener {
                 ? "Press ENTER or SAVE to keep it."
                 : "Scores can't be saved right now.");
 
-        leaderboard.setRows(topRows(rows, -1));
         gameOverCard.setVisible(true);
         boardPanel.revalidate();
         boardPanel.repaint();
@@ -992,18 +973,8 @@ public class GamePanel extends JPanel implements ActionListener {
             scoreSaved = true;
             lastPlayerName = name;
 
-            ArrayList<LeaderboardPanel.Row> rows = loadLeaderboardRows();
-            // Equal scores are listed oldest first, so the newest one is the last match.
-            int index = -1;
-            for (int i = 0; i < rows.size(); i++) {
-                LeaderboardPanel.Row row = rows.get(i);
-                if (row.score == score && row.name.equals(name)) index = i;
-            }
-            leaderboard.setRows(topRows(rows, index));
-
             nameField.setEnabled(false);
             saveButton.setEnabled(false);
-            goRankLabel.setText(index >= 0 ? "You placed #" + rows.get(index).rank + "!" : "Score saved!");
             goStatusLabel.setForeground(MINT);
             goStatusLabel.setText("Score saved!");
         } else {
@@ -1012,46 +983,21 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    // The top five rows. If the new score ranks below fifth, the fifth row is
-    // replaced by the player's own row so it is always visible.
-    private ArrayList<LeaderboardPanel.Row> topRows(ArrayList<LeaderboardPanel.Row> all, int highlightIndex) {
-        ArrayList<LeaderboardPanel.Row> shown = new ArrayList<>();
-        int limit = Math.min(5, all.size());
-        for (int i = 0; i < limit; i++) {
-            if (highlightIndex >= 5 && i == 4) break;
-            LeaderboardPanel.Row row = all.get(i);
-            shown.add(new LeaderboardPanel.Row(row.rank, row.name, row.score, i == highlightIndex));
-        }
-        if (highlightIndex >= 5) {
-            LeaderboardPanel.Row row = all.get(highlightIndex);
-            shown.add(new LeaderboardPanel.Row(row.rank, row.name, row.score, true));
-        }
-        return shown;
-    }
-
-    // Reads every saved score from DataManager ("1. Name - 120 points - date").
-    private ArrayList<LeaderboardPanel.Row> loadLeaderboardRows() {
-        ArrayList<LeaderboardPanel.Row> rows = new ArrayList<>();
-        for (String line : dataManager.loadAllHighScores()) {
-            Matcher match = SCORE_LINE.matcher(line);
-            if (match.matches()) {
-                try {
-                    rows.add(new LeaderboardPanel.Row(
-                            Integer.parseInt(match.group(1)),
-                            match.group(2),
-                            Integer.parseInt(match.group(3)),
-                            false));
-                } catch (NumberFormatException ignored) {
-                    // skip a line with an unreadable number
-                }
+    // Reads the current highest saved score without requiring a leaderboard UI.
+    private int readHighScoreOnFile() {
+        java.util.List<String> scores = dataManager.loadAllHighScores();
+        if (scores.isEmpty()) return 0;
+        java.util.regex.Matcher match = java.util.regex.Pattern
+                .compile("^\\d+\\. .* - (\\d+) points - .*$")
+                .matcher(scores.get(0));
+        if (match.matches()) {
+            try {
+                return Integer.parseInt(match.group(1));
+            } catch (NumberFormatException ignored) {
+                return 0;
             }
         }
-        return rows;
-    }
-
-    private int readHighScoreOnFile() {
-        ArrayList<LeaderboardPanel.Row> rows = loadLeaderboardRows();
-        return rows.isEmpty() ? 0 : rows.get(0).score;
+        return 0;
     }
 
     private void closeGameWindow() {
