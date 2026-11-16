@@ -1,3 +1,5 @@
+package com.mycompany.buffingbites;
+
 public class LevelManager {
 
     public enum Difficulty {

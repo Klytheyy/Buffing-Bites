@@ -1,3 +1,5 @@
+package com.mycompany.buffingbites;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -19,7 +21,7 @@ public class DataManager {
     private static final DataManager INSTANCE = new DataManager();
 
     // The private constructor prevents other classes from using "new DataManager()".
-    DataManager() { }
+    private DataManager() { }
 
     // Other classes call this method to get the one shared DataManager object.
     public static DataManager getInstance() {

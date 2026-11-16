@@ -1,13 +1,15 @@
+package com.mycompany.buffingbites;
+
 // The common product used by GamePanel for every kind of special fruit.
 enum FruitType {
-    GRAPE, GREEN_APPLE, BLUEBERRY, GOLDEN_PEAR
+    GRAPE, BANANA, ORANGE, GOLDEN_PEAR
 }
 
 class SpecialFruit {
     final int x;
     final int y;
     final FruitType type;
-    final long spawned;
+    long spawned; // not final: pausing shifts it forward
     boolean rotten;
 
     SpecialFruit(int x, int y, FruitType type, long spawned) {
@@ -35,19 +37,19 @@ class GrapeCreator extends SpecialFruitCreator {
     }
 }
 
-// Concrete creator for the Green Apple fruit.
-class GreenAppleCreator extends SpecialFruitCreator {
+// Concrete creator for the Banana fruit.
+class BananaCreator extends SpecialFruitCreator {
     @Override
     public SpecialFruit createFruit(int x, int y, long spawnTime) {
-        return new SpecialFruit(x, y, FruitType.GREEN_APPLE, spawnTime);
+        return new SpecialFruit(x, y, FruitType.BANANA, spawnTime);
     }
 }
 
-// Concrete creator for the Blueberry fruit.
-class BlueberryCreator extends SpecialFruitCreator {
+// Concrete creator for the Orange fruit.
+class OrangeCreator extends SpecialFruitCreator {
     @Override
     public SpecialFruit createFruit(int x, int y, long spawnTime) {
-        return new SpecialFruit(x, y, FruitType.BLUEBERRY, spawnTime);
+        return new SpecialFruit(x, y, FruitType.ORANGE, spawnTime);
     }
 }
 

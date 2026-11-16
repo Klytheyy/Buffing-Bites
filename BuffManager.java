@@ -1,3 +1,5 @@
+package com.mycompany.buffingbites;
+
 import java.util.Random;
 
 public class BuffManager {

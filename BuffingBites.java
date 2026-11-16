@@ -1,3 +1,5 @@
+package com.mycompany.buffingbites;
+
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
@@ -18,3 +20,4 @@ public class BuffingBites {
         });
     }
 }
+

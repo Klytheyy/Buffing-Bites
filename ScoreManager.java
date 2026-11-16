@@ -1,3 +1,5 @@
+package com.mycompany.buffingbites;
+
 public class ScoreManager {
 
     private int currentScore = 0;
