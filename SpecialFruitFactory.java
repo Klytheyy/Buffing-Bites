@@ -1,48 +1,62 @@
 package com.mycompany.buffingbites;
 
-public class ScoreManager {
+// The common product used by GamePanel for every kind of special fruit.
+enum FruitType {
+    GRAPE, BANANA, ORANGE, GOLDEN_PEAR
+}
 
-    private int currentScore = 0;
-    private int sessionBestScore = 0;
-    private boolean gameOver = false;
+class SpecialFruit {
+    final int x;
+    final int y;
+    final FruitType type;
+    long spawned; // not final: pausing shifts it forward
+    boolean rotten;
 
-    // Adds the normal value of one regular food item.
-    public void addFoodPoints() {
-        addBonusPoints(10);
+    SpecialFruit(int x, int y, FruitType type, long spawned) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.spawned = spawned;
     }
+}
 
-    // Also accepts negative points for rotten fruit penalties.
-    public void addBonusPoints(int points) {
-        if (gameOver) return;
+// FACTORY METHOD PATTERN:
+// This abstract creator declares the method that creates a fruit.
+// Each child class chooses the specific fruit type to return.
+abstract class SpecialFruitCreator {
 
-        currentScore = Math.max(0, currentScore + points);
-        updateBestScore();
+    // Factory method: subclasses decide which SpecialFruit is constructed.
+    public abstract SpecialFruit createFruit(int x, int y, long spawnTime);
+}
+
+// Concrete creator for the Grape fruit.
+class GrapeCreator extends SpecialFruitCreator {
+    @Override
+    public SpecialFruit createFruit(int x, int y, long spawnTime) {
+        return new SpecialFruit(x, y, FruitType.GRAPE, spawnTime);
     }
+}
 
-    public int getCurrentScore() {
-        return currentScore;
+// Concrete creator for the Banana fruit.
+class BananaCreator extends SpecialFruitCreator {
+    @Override
+    public SpecialFruit createFruit(int x, int y, long spawnTime) {
+        return new SpecialFruit(x, y, FruitType.BANANA, spawnTime);
     }
+}
 
-    public int getSessionBestScore() {
-        return sessionBestScore;
+// Concrete creator for the Orange fruit.
+class OrangeCreator extends SpecialFruitCreator {
+    @Override
+    public SpecialFruit createFruit(int x, int y, long spawnTime) {
+        return new SpecialFruit(x, y, FruitType.ORANGE, spawnTime);
     }
+}
 
-    public void endGame() {
-        gameOver = true;
-    }
-
-    public void resetScore() {
-        currentScore = 0;
-        gameOver = false;
-    }
-
-    private void updateBestScore() {
-        if (currentScore > sessionBestScore) {
-            sessionBestScore = currentScore;
-        }
-    }
-
-    public boolean isGameOver() {
-        return gameOver;
+// Concrete creator for the Golden Pear fruit.
+class GoldenPearCreator extends SpecialFruitCreator {
+    @Override
+    public SpecialFruit createFruit(int x, int y, long spawnTime) {
+        return new SpecialFruit(x, y, FruitType.GOLDEN_PEAR, spawnTime);
     }
 }

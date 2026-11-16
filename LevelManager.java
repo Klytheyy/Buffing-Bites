@@ -21,9 +21,9 @@ public class LevelManager {
     public int getTimerDelay() {
         switch (currentDifficulty) {
             case EASY:
-                return 150;
+                return 200;
             case MEDIUM:
-                return 100;
+                return 150;
             case HARD:
                 return 65;
             default:
@@ -44,3 +44,4 @@ public class LevelManager {
         }
     }
 }
+
